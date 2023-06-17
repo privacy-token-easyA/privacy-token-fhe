@@ -6,7 +6,8 @@ import "../src/contracts/fheETH.sol";
 
 contract fheETHTest is Test {
     FHEToken public fheToken;
-    address public owner;
+
+    // Create 3 addresses for alice, bob and mallory to test
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
     address mallory = makeAddr("mallory");
@@ -14,17 +15,18 @@ contract fheETHTest is Test {
 
     constructor() {
         fheToken = new FHEToken(18, 100);
-        owner = msg.sender;
         FEE = 100;
 
+        // Send 100 ether to alice and bob
         deal(alice, 100 ether);
         deal(bob, 100 ether);
 
         string memory pk_string = "alice_pk";
 
+        // Send the next transaction as alice
         vm.prank(alice);
 
-        // Call `buy_tokens` function with the `pk_bytes` parameter
+        // buy_fETH with FEE + FEE + FEE
         (bool sent, ) = address(fheToken).call{value: FEE * 3}(
             abi.encodeWithSignature("buy_fETH(string)", pk_string)
         );
@@ -32,6 +34,7 @@ contract fheETHTest is Test {
         // Assert that the transaction was sent successfully
         assertEq(sent, true);
 
+        // Send the next transaction as bob
         vm.prank(bob);
         (sent, ) = address(fheToken).call{value: FEE * 3}(
             abi.encodeWithSignature("buy_fETH(string)", pk_string)
@@ -41,6 +44,7 @@ contract fheETHTest is Test {
     }
 
     function test_setup() public {
+        // Assert that alice and bob have FEE + FEE as we spent FEE as the fee
         assertEq(fheToken.balanceOf(bob), FEE * 2);
         assertEq(fheToken.balanceOf(alice), FEE * 2);
     }
@@ -78,6 +82,7 @@ contract fheETHTest is Test {
 
         uint256 aliceBalance = address(alice).balance;
 
+        // Request to withdraw FEE as alice
         vm.prank(alice);
         (bool sent, ) = address(fheToken).call{value: FEE}(
             abi.encodeWithSignature(
@@ -91,6 +96,7 @@ contract fheETHTest is Test {
         assertEq(sent, true);
         assertEq(address(alice).balance, aliceBalance - FEE);
 
+        // Approve the withdrawal as the owner
         (sent, ) = address(fheToken).call(
             abi.encodeWithSignature(
                 "withdraw_ETH_approved(address,uint256,string)",

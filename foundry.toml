@@ -2,5 +2,6 @@
 src = "src/contracts"
 out = "out"
 libs = ["lib"]
+verbosity = 4
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
