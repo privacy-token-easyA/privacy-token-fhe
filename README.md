@@ -1,6 +1,6 @@
 Requirements:
 1. Rust
-
+2. Foundry https://book.getfoundry.sh/getting-started/installation <br>
 Setup:
 1. Get the forked fhe.rs library at <br>
    ```git clone https://github.com/shankars99/fhe.rs.git```
