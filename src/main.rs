@@ -106,7 +106,10 @@ fn deposit_funds(
 fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
     unsafe {
         if ORACLE.is_none() {
-            ORACLE = Some(Oracle::new());
+            return Ok(Json(ResponseApi {
+                res: "Deposit first".to_string(),
+                res_status: "Error".to_string(),
+            }));
         }
 
         let user: User = USER.as_ref().unwrap().clone();
@@ -116,11 +119,6 @@ fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn st
             fhe_pk: user.fhe_pk.clone(),
             fhe_balance: user.fhe_balance.clone(),
         };
-
-        ORACLE
-            .as_mut()
-            .unwrap()
-            .add_user(data.sender_address.clone(), user_as_oracle_user.clone());
 
         let oracle = ORACLE.as_mut().unwrap().clone();
         let receiver_fhe_balance = oracle.return_user_fhe_balance(data.receiver_address.clone());
@@ -169,6 +167,13 @@ fn withdraw_funds(
     data: Json<OracleUserApi>,
 ) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
     unsafe {
+        if ORACLE.is_none() {
+            return Ok(Json(ResponseApi {
+                res: "Deposit first".to_string(),
+                res_status: "Error".to_string(),
+            }));
+        }
+
         let user: User = USER.as_ref().unwrap().clone();
 
         let user_balance = user.user_balance(&ORACLE.as_mut().unwrap());
