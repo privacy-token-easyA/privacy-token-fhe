@@ -26,8 +26,8 @@ impl User {
         sk: SecretKey,
         pk: PublicKey,
         fhe_balance: Ciphertext,
-    ) -> Self {
-        Self {
+    ) -> User {
+        User {
             address,
             key_path,
             der_key,
@@ -37,7 +37,7 @@ impl User {
         }
     }
 
-    pub fn create_tx(&self, receiver: User, oracle: &Oracle, value: u64) -> Tx {
+    pub fn create_tx(&self, receiver: OracleUser, oracle: &Oracle, value: u64) -> Tx {
         let sender = self.clone();
 
         let mut rng = thread_rng();
@@ -126,7 +126,9 @@ pub mod test {
 
         let (fhe_oracle, alice, bob, owner) = create_users(100, 50);
 
-        let txs = alice.create_tx(bob.clone(), &fhe_oracle, delta_balance);
+        let bob_user: OracleUser = fhe_oracle.users[&bob.address].clone();
+
+        let txs = alice.create_tx(bob_user, &fhe_oracle, delta_balance);
 
         let fhe_oracle = txs.execute_tx(&mut fhe_oracle.clone());
 
@@ -152,5 +154,50 @@ pub mod test {
             decoded_user_balance(&bob) == init_bob_balance + delta_balance,
             "Bob's balance is incorrect"
         );
+    }
+
+    #[test]
+    fn test_tx_withdraw() {
+        let init_alice_balance = 100;
+        let delta_balance = 20;
+
+        let (mut fhe_oracle, alice, bob, owner) = create_users(100, 50);
+
+        let new_alice = create_user(
+            alice.address.clone(),
+            fhe_oracle.parameters.clone(),
+            None,
+            Some(0),
+        );
+
+        let new_alice_oracle_user: OracleUser = OracleUser::from_user(new_alice.clone());
+
+        let txs = alice.create_tx(new_alice_oracle_user.clone(), &fhe_oracle, 80);
+
+        let sk = alice.sk.clone();
+        let new_pk = new_alice_oracle_user.pk.clone();
+        let new_fhe_balance: Ciphertext = new_alice.fhe_balance.clone();
+
+        fhe_oracle = txs.execute_withdrawal(
+            &mut fhe_oracle,
+            sk,
+            delta_balance,
+            new_pk.clone(),
+            new_fhe_balance,
+        );
+
+        //assert the new fhe_oracle has the updated pk for alice
+        assert_eq!(
+            fhe_oracle.return_user_pk(new_alice.address.clone()),
+            new_pk.clone()
+        );
+
+        let new_alice = User {
+            fhe_balance: txs.tx_receiver.clone(),
+            ..new_alice
+        };
+        let new_user_balance = decoded_user_balance(&new_alice.clone());
+
+        assert_eq!(new_user_balance, init_alice_balance - delta_balance)
     }
 }
