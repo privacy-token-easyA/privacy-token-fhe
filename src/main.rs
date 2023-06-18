@@ -12,6 +12,7 @@ use fhe_node::fhe_oracle::Oracle;
 use fhe_node::fhe_oracle::OracleUser;
 use fhe_traits::Serialize;
 use fhe_traits::*;
+use fhe_tx_sender::tx_sender;
 use rand::rngs::OsRng;
 use rocket_contrib::json::Json;
 use rocket_cors::{AllowedOrigins, CorsOptions};
@@ -41,21 +42,23 @@ static mut ORACLE: Option<Oracle> = None;
 static mut USER: Option<User> = None;
 
 #[get("/")]
-fn index() -> Json<Message> {
-    Json(Message {
+fn index() -> Json<MessageApi> {
+    Json(MessageApi {
         message: "Welcome to the FHE Node!",
     })
 }
 
 #[post("/deposit_funds", format = "json", data = "<data>")]
-fn deposit_funds(data: Json<DepositFunds>) -> Json<OracleUserString> {
+fn deposit_funds(
+    data: Json<OracleUserApi>,
+) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
     unsafe {
         if ORACLE.is_none() {
             ORACLE = Some(Oracle::new());
         }
 
         let user: User = create_user(
-            data.address.clone(),
+            data.sender_address.clone(),
             ORACLE.as_ref().unwrap().parameters.clone(),
             Some(data.der_key.clone()),
             Some(0),
@@ -72,33 +75,180 @@ fn deposit_funds(data: Json<DepositFunds>) -> Json<OracleUserString> {
         ORACLE
             .as_mut()
             .unwrap()
-            .add_user(data.address.clone(), user_as_oracle_user);
-        let user_oracle: OracleUserString = OracleUserString {
-            address: user.address.clone(),
-            fhe_pk: hex::encode(user.fhe_pk.to_bytes()),
-            fhe_balance: hex::encode(user.fhe_balance.to_bytes()),
+            .add_user(data.sender_address.clone(), user_as_oracle_user.clone());
+        let user_oracle: DepositFundsApi = DepositFundsApi {
+            address: data.sender_address.clone(),
+            amount: data.amount.clone(),
+            fhe_pk: hex::encode(user.fhe_pk.clone().to_bytes()),
+            fhe_balance: hex::encode(user.fhe_balance.clone().to_bytes()),
         };
+        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
 
-        Json(user_oracle)
+        let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let tx_hash = tx_sender::deposit_tokens_tx_sender(
+                &user.fhe_pk.clone(),
+                &get_keys::get_keys("owner").unwrap().private_key.to_string(),
+                &user_as_oracle_user.fhe_balance.clone(),
+                &data.amount.clone(),
+            )
+            .await;
+            let tx_hash = tx_hash.unwrap();
+            let response: ResponseApi = ResponseApi {
+                res: tx_hash.unwrap(),
+                res_status: "Success".to_string(),
+            };
+            Json(response)
+        });
+
+        Ok(result)
     }
 }
 
 #[post("/send_funds", format = "json", data = "<data>")]
-fn send_funds(data: Json<SendFunds>) -> Json<OracleUserString> {
-    Json(OracleUserString {
-        address: data.address_from.clone(),
-        fhe_pk: "fhe_pk".to_string(),
-        fhe_balance: data.amount.to_string(), // Check type
-    })
+fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
+    unsafe {
+        if ORACLE.is_none() {
+            ORACLE = Some(Oracle::new());
+        }
+
+        let user: User = USER.as_ref().unwrap().clone();
+
+        let user_as_oracle_user: OracleUser = OracleUser {
+            address: user.address.clone(),
+            fhe_pk: user.fhe_pk.clone(),
+            fhe_balance: user.fhe_balance.clone(),
+        };
+
+        ORACLE
+            .as_mut()
+            .unwrap()
+            .add_user(data.sender_address.clone(), user_as_oracle_user.clone());
+
+        let oracle = ORACLE.as_mut().unwrap().clone();
+        let receiver_fhe_balance = oracle.return_user_fhe_balance(data.receiver_address.clone());
+        let receiver_fhe_pk = oracle.return_user_pk(data.receiver_address.clone());
+
+        let receiver_as_oracle_user: OracleUser = OracleUser {
+            address: data.receiver_address.clone(),
+            fhe_pk: receiver_fhe_pk.clone(),
+            fhe_balance: receiver_fhe_balance.clone(),
+        };
+
+        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
+
+        let tx = user.create_tx(
+            receiver_as_oracle_user.clone(),
+            &ORACLE.as_mut().unwrap(),
+            data.amount.parse::<u64>().unwrap(),
+        );
+
+        let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
+
+        let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let tx_hash = tx_sender::send_fhe_tx(
+                &tx_sender,
+                &tx_receiver,
+                &"0".to_string().as_str(),
+                &user_pk.to_string(),
+                &data.amount.clone(),
+            )
+            .await;
+            let tx_hash = tx_hash.unwrap();
+            let response: ResponseApi = ResponseApi {
+                res: tx_hash.unwrap(),
+                res_status: "Success".to_string(),
+            };
+            USER = Some(user.clone());
+            Json(response)
+        });
+
+        Ok(result)
+    }
 }
 
 #[post("/withdraw_funds", format = "json", data = "<data>")]
-fn withdraw_funds(data: Json<WithdrawFunds>) -> Json<OracleUserString> {
-    Json(OracleUserString {
-        address: data.address_to.clone(),
-        fhe_pk: "fhe_pk".to_string(),
-        fhe_balance: data.amount.to_string(), // Check type
-    })
+fn withdraw_funds(
+    data: Json<OracleUserApi>,
+) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
+    unsafe {
+        let user: User = USER.as_ref().unwrap().clone();
+
+        let user_balance = user.user_balance(&ORACLE.as_mut().unwrap());
+
+        let user_new: User = create_user(
+            data.sender_address.clone(),
+            ORACLE.as_ref().unwrap().parameters.clone(),
+            Some(data.der_key.clone()),
+            Some(0),
+        );
+
+        let user_as_oracle_user: OracleUser = OracleUser {
+            address: user.address.clone(),
+            fhe_pk: user.fhe_pk.clone(),
+            fhe_balance: user.fhe_balance.clone(),
+        };
+
+        let new_user_as_oracle_user: OracleUser = OracleUser {
+            address: user_new.address.clone(),
+            fhe_pk: user_new.fhe_pk.clone(),
+            fhe_balance: user_new.fhe_balance.clone(),
+        };
+
+        let oracle = ORACLE.as_mut().unwrap().clone();
+        let receiver_fhe_balance = oracle.return_user_fhe_balance(data.receiver_address.clone());
+        let receiver_fhe_pk = oracle.return_user_pk(data.receiver_address.clone());
+
+        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
+
+        let tx = user.create_tx(
+            user_as_oracle_user.clone(),
+            &ORACLE.as_mut().unwrap(),
+            user_balance - data.amount.parse::<u64>().unwrap(),
+        );
+
+        let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
+        let user_fhe_sk = user.fhe_sk.clone();
+        let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let tx_hash = tx_sender::withdraw_ETH_request(
+                &data.amount.clone(),
+                &user.fhe_sk.clone(),
+                &new_user_as_oracle_user.fhe_pk.clone(),
+                &new_user_as_oracle_user.fhe_balance.clone(),
+                &user_pk.to_string(),
+            )
+            .await;
+            let tx_hash = tx_hash.unwrap();
+            let response: ResponseApi = ResponseApi {
+                res: tx_hash.unwrap(),
+                res_status: "Success".to_string(),
+            };
+            let tx_hash = tx_sender::withdraw_ETH_confirm(
+                &data.amount.clone(),
+                &data.sender_address.clone(),
+                &get_keys::get_keys("owner").unwrap().private_key.to_string(),
+            )
+            .await;
+            Json(response)
+        });
+
+        Ok(result)
+    }
+}
+
+#[get("/get_balance")]
+fn get_balance() -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
+    unsafe {
+        let user: User = USER.as_ref().unwrap().clone();
+
+        let user_balance = user.user_balance(&ORACLE.as_mut().unwrap()).to_string();
+
+        let response: ResponseApi = ResponseApi {
+            res: user_balance,
+            res_status: "Success".to_string(),
+        };
+
+        Ok(Json(response))
+    }
 }
 
 fn make_cors() -> rocket_cors::Cors {
@@ -121,7 +271,16 @@ fn make_cors() -> rocket_cors::Cors {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![index, deposit_funds, send_funds, withdraw_funds])
+        .mount(
+            "/",
+            routes![
+                index,
+                deposit_funds,
+                send_funds,
+                withdraw_funds,
+                get_balance
+            ],
+        )
         .attach(make_cors())
         .launch();
 }
