@@ -1,14 +1,25 @@
 #![allow(unused_imports, unused_variables, dead_code)]
 #![feature(proc_macro_hygiene, decl_macro)]
-#[macro_use] extern crate rocket;
 
+#[macro_use]
+extern crate rocket;
+
+use ethers::utils::hex;
 use fhe::bfv::{BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
+use fhe_account_handler::get_keys;
+use fhe_account_handler::user::*;
+use fhe_node::fhe_oracle::Oracle;
+use fhe_traits::Serialize;
 use fhe_traits::*;
-use rand::{rngs::OsRng, thread_rng};
-use std::sync::Arc;
-use rocket_cors::{AllowedOrigins, CorsOptions};
+use rand::rngs::OsRng;
 use rocket_contrib::json::Json;
-use serde::Serialize;
+use rocket_cors::{AllowedOrigins, CorsOptions};
+use rocket_helper::structs::*;
+use std::sync::Arc;
+
+mod rocket_helper {
+    pub(crate) mod structs;
+}
 
 mod fhe_account_handler {
     pub(crate) mod get_keys;
@@ -20,31 +31,40 @@ mod fhe_node {
     pub(crate) mod fhe_oracle;
 }
 
-// Import the cors crate
-// rocket is for the webserver
-#[derive(Serialize)]
-struct Message {
-    message: &'static str,
-}
+static mut ORACLE: Option<Oracle> = None;
+static mut USER: Option<User> = None;
 
 #[get("/")]
-fn index() ->  Json<Message> {
+fn index() -> Json<Message> {
     Json(Message {
         message: "Welcome to the FHE Node!",
     })
 }
-#[get("/testinput/<input>")]
-fn testinput(input: String) -> String {
-    input
-}
-#[get("/greet/<name>")]
-fn greet(name: String) -> String {
-    format!("Hey {}, glad to have you here!", name)
-}
 
-#[get("/check_tx_hash/<tx_hash>")]
-fn call_check_tx_hash(tx_hash: String) -> String {
-    fhe_node::fhe_execution::check_tx_hash(tx_hash).to_string()
+#[post("/create_account", format = "json", data = "<data>")]
+fn create_account(data: Json<CreateAccount>) -> Json<OracleUserString> {
+    unsafe {
+        if ORACLE.is_none() {
+            ORACLE = Some(Oracle::new());
+        }
+
+        let user: User = create_user(
+            data.address.clone(),
+            ORACLE.as_ref().unwrap().parameters.clone(),
+            Some(data.der_key.clone()),
+            Some(0),
+        );
+
+        USER = Some(user.clone());
+
+        let user_oracle: OracleUserString = OracleUserString {
+            address: user.address.clone(),
+            fhe_pk: hex::encode(user.fhe_pk.to_bytes()),
+            fhe_balance: hex::encode(user.fhe_balance.to_bytes()),
+        };
+
+        Json(user_oracle)
+    }
 }
 
 fn make_cors() -> rocket_cors::Cors {
@@ -65,7 +85,7 @@ fn make_cors() -> rocket_cors::Cors {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![index,greet,testinput,call_check_tx_hash])
+        .mount("/", routes![index, create_account])
         .attach(make_cors())
         .launch();
 }
