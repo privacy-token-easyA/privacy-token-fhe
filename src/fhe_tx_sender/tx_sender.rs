@@ -54,8 +54,7 @@ function recvTx(
     )
 */
 
-pub async fn recvtx_tx_sender(
-    to_address: &str,
+pub async fn send_fhe_tx(
     fhe_tx_sender: &str,
     fhe_tx_receiver: &str,
     fhe_proof: &str,
@@ -67,8 +66,7 @@ pub async fn recvtx_tx_sender(
     let output = Command::new("cast")
         .arg("send")
         .arg(deployed_address)
-        .arg("recvTx(address,bytes,bytes,bytes)")
-        .arg(to_address)
+        .arg("send_fhe_tx(string,string,string)")
         .arg(fhe_tx_sender)
         .arg(fhe_tx_receiver)
         .arg(fhe_proof)
@@ -148,7 +146,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_recvtx() {
+    async fn test_send_fhe_tx() {
         let rng = thread_rng();
 
         let (fhe_oracle, alice, bob, owner) = create_users(100, 50);
@@ -165,8 +163,7 @@ mod tests {
 
         let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
 
-        let tx_hash = recvtx_tx_sender(
-            &bob.address.clone(),
+        let tx_hash = send_fhe_tx(
             &tx_sender,
             &tx_receiver,
             &tx.tx_proof,
