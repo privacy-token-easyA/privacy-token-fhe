@@ -30,7 +30,7 @@ contract FHEToken is ERC20 {
      * @param fhe_pk The fhe public key of the user
      * @param fhe_balance_init The initial balance of the user in the fhe_account
      */
-    event Buy_fETH(
+    event Deposit_fETH(
         address indexed from,
         uint256 amount,
         string fhe_pk,
@@ -101,7 +101,7 @@ contract FHEToken is ERC20 {
      * @dev Mints fETH to the msg.sender
      * @param _fhe_pk The public key of the user
      */
-    function buy_fETH(
+    function deposit_fETH(
         string calldata _fhe_pk,
         string calldata _fhe_balance_init
     ) public payable onlyValidFees {
@@ -112,7 +112,12 @@ contract FHEToken is ERC20 {
             hasUser[msg.sender] = true;
         }
 
-        emit Buy_fETH(msg.sender, msg.value - FEE, _fhe_pk, _fhe_balance_init);
+        emit Deposit_fETH(
+            msg.sender,
+            msg.value - FEE,
+            _fhe_pk,
+            _fhe_balance_init
+        );
     }
 
     /**
@@ -175,7 +180,7 @@ contract FHEToken is ERC20 {
     ) external payable onlyOwner {
         payable(_user).transfer(_amount);
 
-        emit Buy_fETH(_user, 0, _new_fhe_pk, _fhe_new_balance);
+        emit Deposit_fETH(_user, 0, _new_fhe_pk, _fhe_new_balance);
         emit Withdraw_ETH_Approved(
             _user,
             _amount,

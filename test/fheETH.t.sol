@@ -27,10 +27,10 @@ contract fheETHTest is Test {
         // Send the next transaction as alice
         vm.prank(alice);
 
-        // buy_fETH with FEE + FEE + FEE
+        // deposit_fETH with FEE + FEE + FEE
         (bool sent, ) = address(fheToken).call{value: FEE * 3}(
             abi.encodeWithSignature(
-                "buy_fETH(string,string)",
+                "deposit_fETH(string,string)",
                 pk_string,
                 fhe_balance_init
             )
@@ -43,7 +43,7 @@ contract fheETHTest is Test {
         vm.prank(bob);
         (sent, ) = address(fheToken).call{value: FEE * 3}(
             abi.encodeWithSignature(
-                "buy_fETH(string,string)",
+                "deposit_fETH(string,string)",
                 pk_string,
                 fhe_balance_init
             )
@@ -58,7 +58,7 @@ contract fheETHTest is Test {
         assertEq(fheToken.balanceOf(alice), FEE * 2);
     }
 
-    function test_buy_fETH() public {
+    function test_deposit_fETH() public {
         bool aliceExists = fheToken.hasUser(alice);
         assertEq(aliceExists, true);
 
