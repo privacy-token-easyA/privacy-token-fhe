@@ -10,3 +10,5 @@ rand = "0.8.5"
 fhe = { version = "^0.1.0-beta.5", path = "fhe.rs/crates/fhe" }
 fhe-traits = { version = "^0.1.0-beta.4", path = "fhe.rs/crates/fhe-traits" }
 ethers = "2.0.7"
+rocket = "0.4.7"
+rocket_cors = "0.5.2"
