@@ -32,6 +32,11 @@ mod fhe_node {
     pub(crate) mod fhe_oracle;
 }
 
+mod fhe_tx_sender {
+    pub(crate) mod contract_deployer;
+    pub(crate) mod tx_sender;
+}
+
 static mut ORACLE: Option<Oracle> = None;
 static mut USER: Option<User> = None;
 
