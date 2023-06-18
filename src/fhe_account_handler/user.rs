@@ -13,8 +13,8 @@ pub struct User {
     pub address: String,
     pub key_path: String,
     pub der_key: String,
-    pub sk: SecretKey,
-    pub pk: PublicKey,
+    pub fhe_sk: SecretKey,
+    pub fhe_pk: PublicKey,
     pub fhe_balance: Ciphertext,
 }
 
@@ -23,16 +23,16 @@ impl User {
         address: String,
         key_path: String,
         der_key: String,
-        sk: SecretKey,
-        pk: PublicKey,
+        fhe_sk: SecretKey,
+        fhe_pk: PublicKey,
         fhe_balance: Ciphertext,
     ) -> User {
         User {
             address,
             key_path,
             der_key,
-            sk,
-            pk,
+            fhe_sk,
+            fhe_pk,
             fhe_balance,
         }
     }
@@ -52,15 +52,15 @@ impl User {
             String::new(),
             self.address.clone(),
             receiver.address.clone(),
-            sender.pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
-            receiver.pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
+            sender.fhe_pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
+            receiver.fhe_pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
             String::new(),
         )
     }
 
     pub fn user_balance(&self, oracle: &Oracle) -> u64 {
         let oracle_user = oracle.users.get(&self.address).unwrap();
-        let decrypted_plaintext = self.sk.try_decrypt(&oracle_user.fhe_balance).unwrap();
+        let decrypted_plaintext = self.fhe_sk.try_decrypt(&oracle_user.fhe_balance).unwrap();
         let decrypted_vector =
             Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
 
@@ -69,7 +69,7 @@ impl User {
 }
 
 pub fn decoded_user_balance(user: &User) -> u64 {
-    let decrypted_plaintext = user.sk.try_decrypt(&user.fhe_balance).unwrap();
+    let decrypted_plaintext = user.fhe_sk.try_decrypt(&user.fhe_balance).unwrap();
     let decrypted_vector = Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
 
     decrypted_vector[0]
@@ -174,8 +174,8 @@ pub mod test {
 
         let txs = alice.create_tx(new_alice_oracle_user.clone(), &fhe_oracle, 80);
 
-        let sk = alice.sk.clone();
-        let new_pk = new_alice_oracle_user.pk.clone();
+        let sk = alice.fhe_sk.clone();
+        let new_pk = new_alice_oracle_user.fhe_pk.clone();
         let new_fhe_balance: Ciphertext = new_alice.fhe_balance.clone();
 
         fhe_oracle = txs.execute_withdrawal(

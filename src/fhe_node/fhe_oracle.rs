@@ -8,23 +8,23 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct OracleUser {
     pub address: String,
-    pub pk: PublicKey,
+    pub fhe_pk: PublicKey,
     pub fhe_balance: Ciphertext,
 }
 
 impl OracleUser {
-    pub fn new(address: String, pk: PublicKey, fhe_balance: Ciphertext) -> Self {
-        Self {
+    pub fn new(address: String, fhe_pk: PublicKey, fhe_balance: Ciphertext) -> OracleUser {
+        OracleUser {
             address,
-            pk,
+            fhe_pk,
             fhe_balance,
         }
     }
 
-    pub fn from_user(user: User) -> Self {
-        Self {
+    pub fn from_user(user: User) -> OracleUser {
+        OracleUser {
             address: user.address,
-            pk: user.pk,
+            fhe_pk: user.fhe_pk,
             fhe_balance: user.fhe_balance,
         }
     }
@@ -59,8 +59,8 @@ impl Oracle {
         self.users.get_mut(&address).unwrap().fhe_balance = fhe_balance;
     }
 
-    pub fn update_user_pk(&mut self, address: String, pk: PublicKey) {
-        self.users.get_mut(&address).unwrap().pk = pk;
+    pub fn update_user_pk(&mut self, address: String, fhe_pk: PublicKey) {
+        self.users.get_mut(&address).unwrap().fhe_pk = fhe_pk;
     }
 
     pub fn return_user_fhe_balance(&self, address: String) -> Ciphertext {
@@ -68,7 +68,7 @@ impl Oracle {
     }
 
     pub fn return_user_pk(&self, address: String) -> PublicKey {
-        self.users[&address].pk.clone()
+        self.users[&address].fhe_pk.clone()
     }
 }
 
@@ -85,21 +85,21 @@ mod tests {
         let oracle_parameters = oracle.parameters.clone();
         let mut rng = rand::thread_rng();
 
-        let sk = SecretKey::random(&oracle_parameters, &mut rng);
-        let pk = PublicKey::new(&sk, &mut rng);
+        let fhe_sk = SecretKey::random(&oracle_parameters, &mut rng);
+        let fhe_pk = PublicKey::new(&fhe_sk, &mut rng);
 
         let balance: Plaintext =
             Plaintext::try_encode(&[0_u64], Encoding::poly(), &oracle_parameters).unwrap();
-        let fhe_balance: Ciphertext = sk.try_encrypt(&balance, &mut rng).unwrap();
+        let fhe_balance: Ciphertext = fhe_sk.try_encrypt(&balance, &mut rng).unwrap();
 
         let address = "0x123".to_string();
-        let user = OracleUser::new(address.clone(), pk, fhe_balance);
+        let user = OracleUser::new(address.clone(), fhe_pk, fhe_balance);
         let address_clone = address.clone();
         oracle.add_user(address_clone, user.clone());
 
         assert_eq!(user.address, oracle.users[&address].address);
 
-        let decrypted_plaintext = sk.try_decrypt(&user.fhe_balance).unwrap();
+        let decrypted_plaintext = fhe_sk.try_decrypt(&user.fhe_balance).unwrap();
         let decrypted_vector =
             Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
         assert_eq!(decrypted_vector[0], 0);
