@@ -9,7 +9,7 @@ use crate::fhe_tx_sender::contract_deployer::get_deployed_address;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 
-async fn deposit_tokens_tx_sender(
+pub async fn deposit_tokens_tx_sender(
     pk: &PublicKey,
     priv_key: &String,
     fhe_balance: &Ciphertext,
@@ -107,6 +107,30 @@ pub async fn withdraw_ETH_request(
         .arg(priv_key)
         .arg("--value")
         .arg(amount)
+        .output()
+        .await?;
+
+    match get_tx_hash(output).await {
+        Ok(tx_hash) => Ok(tx_hash),
+        Err(error) => {
+            eprintln!("Failed to execute script: {}", error);
+            Ok(None)
+        }
+    }
+}
+
+pub async fn withdraw_ETH_confirm(
+    amount: &String,
+    recv_address: &String,
+    priv_key: &String,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let output = Command::new("cast")
+        .arg("send")
+        .arg(recv_address)
+        .arg("--value")
+        .arg(amount)
+        .arg("--private-key")
+        .arg(priv_key)
         .output()
         .await?;
 
