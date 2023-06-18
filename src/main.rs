@@ -61,7 +61,7 @@ fn deposit_funds(
             data.sender_address.clone(),
             ORACLE.as_ref().unwrap().parameters.clone(),
             Some(data.der_key.clone()),
-            Some(0),
+            Some(data.amount.clone().parse::<u64>().unwrap()),
         );
 
         USER = Some(user.clone());
@@ -76,18 +76,14 @@ fn deposit_funds(
             .as_mut()
             .unwrap()
             .add_user(data.sender_address.clone(), user_as_oracle_user.clone());
-        let priv_key = get_keys::get_keys("owner").unwrap().private_key.to_string();
+        let priv_key = get_keys::get_keys("user").unwrap().private_key.to_string();
         let pk = user.fhe_pk.clone();
         let fhe_balance = user.fhe_balance.clone();
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let tx_hash = tx_sender::deposit_tokens_tx_sender(
-                &pk,
-                &priv_key,
-                &fhe_balance,
-                &"10".to_string(),
-            )
-            .await;
+            let tx_hash =
+                tx_sender::deposit_tokens_tx_sender(&pk, &priv_key, &fhe_balance, &data.amount)
+                    .await;
 
             let tx_hash = tx_hash.unwrap();
             let response: ResponseApi = ResponseApi {
@@ -115,7 +111,7 @@ fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn st
         //println!("115 data: {:?}", data);
 
         let user: User = USER.as_ref().unwrap().clone();
-        
+
         //println!("119 data: {:?}", data);
         let user_as_oracle_user: OracleUser = OracleUser {
             address: user.address.clone(),
@@ -134,9 +130,9 @@ fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn st
             fhe_pk: receiver_fhe_pk.clone(),
             fhe_balance: receiver_fhe_balance.clone(),
         };
-        
+
         //println!("138 data: {:?}", data);
-        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
+        let user_pk = get_keys::get_keys("user").unwrap().private_key;
 
         println!("145 data: {:?}", data.amount.parse::<u64>().unwrap());
         let tx = user.create_tx(
@@ -209,7 +205,7 @@ fn withdraw_funds(
         let receiver_fhe_balance = oracle.return_user_fhe_balance(data.receiver_address.clone());
         let receiver_fhe_pk = oracle.return_user_pk(data.receiver_address.clone());
 
-        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
+        let user_pk = get_keys::get_keys("user").unwrap().private_key;
 
         let tx = user.create_tx(
             user_as_oracle_user.clone(),
@@ -236,7 +232,7 @@ fn withdraw_funds(
             let tx_hash = tx_sender::withdraw_ETH_confirm(
                 &data.amount.clone(),
                 &data.sender_address.clone(),
-                &get_keys::get_keys("owner").unwrap().private_key.to_string(),
+                &get_keys::get_keys("user").unwrap().private_key.to_string(),
             )
             .await;
             Json(response)
