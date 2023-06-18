@@ -6,7 +6,7 @@ use std::str;
 static mut DEPLOYED_ADDRESS: Option<String> = None;
 pub const DEPLOYED_BLOCK: u64 = 0;
 pub const URL: &str = "http://127.0.0.1:8545";
-pub const FEE: &str = "100";
+pub const FEE: &str = "0";
 
 // executes forge create src/contracts/fheETH.sol:FHEToken --constructor-args 8 100 --unlocked --from 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 fn deployer(owner: &str) -> Option<String> {

@@ -76,27 +76,25 @@ fn deposit_funds(
             .as_mut()
             .unwrap()
             .add_user(data.sender_address.clone(), user_as_oracle_user.clone());
-        let user_oracle: DepositFundsApi = DepositFundsApi {
-            address: data.sender_address.clone(),
-            amount: data.amount.clone(),
-            fhe_pk: hex::encode(user.fhe_pk.clone().to_bytes()),
-            fhe_balance: hex::encode(user.fhe_balance.clone().to_bytes()),
-        };
-        let user_pk = get_keys::get_keys("owner").unwrap().private_key;
+        let priv_key = get_keys::get_keys("owner").unwrap().private_key.to_string();
+        let pk = user.fhe_pk.clone();
+        let fhe_balance = user.fhe_balance.clone();
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let tx_hash = tx_sender::deposit_tokens_tx_sender(
-                &user.fhe_pk.clone(),
-                &get_keys::get_keys("owner").unwrap().private_key.to_string(),
-                &user_as_oracle_user.fhe_balance.clone(),
-                &data.amount.clone(),
+                &pk,
+                &priv_key,
+                &fhe_balance,
+                &"10".to_string(),
             )
             .await;
+
             let tx_hash = tx_hash.unwrap();
             let response: ResponseApi = ResponseApi {
                 res: tx_hash.unwrap(),
                 res_status: "Success".to_string(),
             };
+            USER = Some(user.clone());
             Json(response)
         });
 

@@ -199,6 +199,7 @@ mod tests {
 
         let tx_hash =
             deposit_tokens_tx_sender(&pk, &priv_key, &fhe_balance, &FEE.to_string()).await;
+
         assert!(tx_hash.is_ok());
     }
 
@@ -228,6 +229,7 @@ mod tests {
             &FEE.to_string(),
         )
         .await;
+        println!("{:?}", tx_hash);
 
         assert!(tx_hash.is_ok());
     }
@@ -248,6 +250,7 @@ mod tests {
 
         let tx_hash =
             withdraw_ETH_request(&FEE.to_string(), &fhe_sk, &fhe_pk, &fhe_balance, &priv_key).await;
+        println!("{:?}", tx_hash);
 
         assert!(tx_hash.is_ok());
     }
