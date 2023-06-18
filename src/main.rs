@@ -105,39 +105,47 @@ fn deposit_funds(
 #[post("/send_funds", format = "json", data = "<data>")]
 fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
     unsafe {
+        //println!("108 data: {:?}", data);
         if ORACLE.is_none() {
             return Ok(Json(ResponseApi {
                 res: "Deposit first".to_string(),
                 res_status: "Error".to_string(),
             }));
         }
+        //println!("115 data: {:?}", data);
 
         let user: User = USER.as_ref().unwrap().clone();
-
+        
+        //println!("119 data: {:?}", data);
         let user_as_oracle_user: OracleUser = OracleUser {
             address: user.address.clone(),
             fhe_pk: user.fhe_pk.clone(),
             fhe_balance: user.fhe_balance.clone(),
         };
+        //println!("125 data: {:?}", data);
 
         let oracle = ORACLE.as_mut().unwrap().clone();
         let receiver_fhe_balance = oracle.return_user_fhe_balance(data.receiver_address.clone());
         let receiver_fhe_pk = oracle.return_user_pk(data.receiver_address.clone());
 
+        //println!("131 data: {:?}", data);
         let receiver_as_oracle_user: OracleUser = OracleUser {
             address: data.receiver_address.clone(),
             fhe_pk: receiver_fhe_pk.clone(),
             fhe_balance: receiver_fhe_balance.clone(),
         };
-
+        
+        //println!("138 data: {:?}", data);
         let user_pk = get_keys::get_keys("owner").unwrap().private_key;
 
+        println!("145 data: {:?}", data.amount.parse::<u64>().unwrap());
         let tx = user.create_tx(
             receiver_as_oracle_user.clone(),
-            &ORACLE.as_mut().unwrap(),
+            &ORACLE.as_mut().unwrap().clone(),
             data.amount.parse::<u64>().unwrap(),
         );
 
+        println!("1468 data: {:?}", data);
         let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {

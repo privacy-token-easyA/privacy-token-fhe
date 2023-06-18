@@ -5,7 +5,7 @@ pub struct MessageApi {
     pub message: &'static str,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct OracleUserApi {
     pub amount: String,
     pub sender_address: String,

@@ -42,6 +42,8 @@ impl User {
 
         let mut rng = thread_rng();
 
+        // this line somehow fixes the code DON'T REMOVE
+        println!("oracle balance: {}, value balance {}", sender.user_balance(oracle), value);
         assert!(sender.user_balance(oracle) >= value, "Insufficient funds");
         assert!(value > 0, "Value must be greater than 0");
 
