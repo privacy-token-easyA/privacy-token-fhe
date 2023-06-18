@@ -2622,6 +2622,7 @@ name = "privacy-token-fhe"
 version = "0.1.0"
 dependencies = [
  "ethers",
+ "eyre",
  "fhe",
  "fhe-traits",
  "rand",
@@ -2629,6 +2630,7 @@ dependencies = [
  "rocket_contrib",
  "rocket_cors",
  "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -3301,6 +3303,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook-registry"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "signature"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3590,9 +3601,23 @@ dependencies = [
  "libc",
  "mio 0.8.8",
  "num_cpus",
+ "parking_lot",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
+ "tokio-macros",
  "windows-sys",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
+dependencies = [
+ "proc-macro2 1.0.60",
+ "quote 1.0.28",
+ "syn 2.0.18",
 ]
 
 [[package]]
