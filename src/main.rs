@@ -56,12 +56,17 @@ fn deposit_funds(
         if ORACLE.is_none() {
             ORACLE = Some(Oracle::new());
         }
-
+        let mut toAdd = 0;
+        if USER.is_some(){
+            toAdd = USER.as_ref().unwrap().user_balance(&ORACLE.as_mut().unwrap());
+        }
+        
         let user: User = create_user(
             data.sender_address.clone(),
             ORACLE.as_ref().unwrap().parameters.clone(),
             Some(data.der_key.clone()),
-            Some(data.amount.clone().parse::<u64>().unwrap()),
+            // TODO make balance add onto itself
+            Some(data.amount.clone().parse::<u64>().unwrap()+toAdd),
         );
 
         USER = Some(user.clone());
