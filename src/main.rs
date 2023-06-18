@@ -7,6 +7,8 @@ use fhe_traits::*;
 use rand::{rngs::OsRng, thread_rng};
 use std::sync::Arc;
 use rocket_cors::{AllowedOrigins, CorsOptions};
+use rocket_contrib::json::Json;
+use serde::Serialize;
 
 mod fhe_account_handler {
     pub(crate) mod get_keys;
@@ -20,10 +22,16 @@ mod fhe_node {
 
 // Import the cors crate
 // rocket is for the webserver
+#[derive(Serialize)]
+struct Message {
+    message: &'static str,
+}
 
 #[get("/")]
-fn index() -> &'static str {
-    "Welcome to the FHE Node!"
+fn index() ->  Json<Message> {
+    Json(Message {
+        message: "Welcome to the FHE Node!",
+    })
 }
 #[get("/testinput/<input>")]
 fn testinput(input: String) -> String {
