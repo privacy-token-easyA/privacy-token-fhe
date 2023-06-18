@@ -68,12 +68,15 @@ impl User {
     }
 }
 
+// TODO: add a function to create a user if does't
 pub fn decoded_user_balance(user: &User) -> u64 {
     let decrypted_plaintext = user.fhe_sk.try_decrypt(&user.fhe_balance).unwrap();
     let decrypted_vector = Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
 
     decrypted_vector[0]
 }
+
+// TODO: add a function to create a user if does't
 pub fn create_user(
     address: String,
     parameters: Arc<fhe::bfv::BfvParameters>,
