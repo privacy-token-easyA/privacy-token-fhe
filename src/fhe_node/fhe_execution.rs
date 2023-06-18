@@ -1,7 +1,12 @@
-use crate::fhe_node::fhe_oracle::Oracle;
+use crate::{
+    fhe_account_handler::user::{self, decoded_user_balance, User},
+    fhe_node::fhe_oracle::Oracle,
+};
 use ethers::utils::hex;
 use fhe::bfv::{BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
 use fhe_traits::*;
+
+use super::fhe_oracle::OracleUser;
 
 #[derive(Clone)]
 pub struct Tx {
@@ -95,16 +100,63 @@ impl Tx {
 
         fhe_oracle.clone()
     }
+
+    pub fn execute_withdrawal(
+        &self,
+        fhe_oracle: &mut Oracle,
+        sk: SecretKey,
+        amt: u64,
+        new_pk: PublicKey,
+        new_fhe_balance: Ciphertext,
+    ) -> Oracle {
+        let tx = self.clone();
+
+        // check if tx_hash is in LIST_OF_TXS
+        check_tx_hash(tx.tx_hash.clone());
+
+        unsafe {
+            LIST_OF_TXS.push(tx.clone());
+        }
+
+        let pk = fhe_oracle.return_user_pk(tx.sender.clone());
+        let address = tx.sender.clone();
+
+        let user_old: User = User::new(
+            address.clone(),
+            String::from(""),
+            String::from(""),
+            sk.clone(),
+            pk.clone(),
+            fhe_oracle.return_user_fhe_balance(address.clone()),
+        );
+
+        let user_old_fhe_balance = fhe_oracle.return_user_fhe_balance(address.clone());
+        let user_balance = &user_old_fhe_balance - &self.tx_sender.clone();
+
+        let user_old = User {
+            fhe_balance: user_balance.clone(),
+            ..user_old
+        };
+
+        let user_balance = decoded_user_balance(&user_old);
+
+        if amt == user_balance {
+            let new_fhe_balance: Ciphertext = &new_fhe_balance + &tx.tx_receiver.clone();
+            fhe_oracle.update_user_fhe_balance(address.clone(), new_fhe_balance);
+            fhe_oracle.update_user_pk(address.clone(), new_pk);
+        } else {
+            println!("Not enough balance to withdraw");
+        }
+
+        fhe_oracle.clone()
+    }
 }
 
 pub fn check_tx_hash(tx_hash: String) -> bool {
-    let mut tx_exists = false;
-
     for tx in unsafe { LIST_OF_TXS.iter() } {
         if tx.tx_hash == tx_hash {
-            tx_exists = true;
             println!("Tx already exists in LIST_OF_TXS");
-            break;
+            return true;
         }
     }
 
