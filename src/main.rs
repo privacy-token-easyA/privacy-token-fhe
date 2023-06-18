@@ -42,8 +42,8 @@ fn index() -> Json<Message> {
     })
 }
 
-#[post("/create_account", format = "json", data = "<data>")]
-fn create_account(data: Json<CreateAccount>) -> Json<OracleUserString> {
+#[post("/deposit_funds", format = "json", data = "<data>")]
+fn deposit_funds(data: Json<DepositFunds>) -> Json<OracleUserString> {
     unsafe {
         if ORACLE.is_none() {
             ORACLE = Some(Oracle::new());
@@ -78,11 +78,30 @@ fn create_account(data: Json<CreateAccount>) -> Json<OracleUserString> {
     }
 }
 
+#[post("/send_funds", format = "json", data = "<data>")]
+fn send_funds(data: Json<SendFunds>) -> Json<OracleUserString> {
+    Json(OracleUserString {
+        address: data.address_from.clone(),
+        fhe_pk: "fhe_pk".to_string(),
+        fhe_balance: data.amount.to_string(), // Check type
+    })
+}
+
+#[post("/withdraw_funds", format = "json", data = "<data>")]
+fn withdraw_funds(data: Json<WithdrawFunds>) -> Json<OracleUserString> {
+    Json(OracleUserString {
+        address: data.address_to.clone(),
+        fhe_pk: "fhe_pk".to_string(),
+        fhe_balance: data.amount.to_string(), // Check type
+    })
+}
+
 fn make_cors() -> rocket_cors::Cors {
     let allowed_origins = AllowedOrigins::some_exact(&[
         // Add your specific origins here. Note that `*` cannot be used
         // if you have the credentials flag enabled.
         "http://localhost:3000", // replace with your actual origin
+        "http://localhost:8000",
     ]);
 
     CorsOptions {
@@ -96,7 +115,7 @@ fn make_cors() -> rocket_cors::Cors {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![index, create_account])
+        .mount("/", routes![index, deposit_funds, send_funds, withdraw_funds])
         .attach(make_cors())
         .launch();
 }
