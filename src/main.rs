@@ -107,6 +107,7 @@ fn make_cors() -> rocket_cors::Cors {
         // if you have the credentials flag enabled.
         "http://localhost:3000", // replace with your actual origin
         "http://localhost:8000",
+        "http://localhost:5173",
     ]);
 
     CorsOptions {
