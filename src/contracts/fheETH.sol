@@ -28,8 +28,14 @@ contract FHEToken is ERC20 {
      * @param from The address of the user who bought fETH
      * @param amount The amount of fETH bought
      * @param fhe_pk The fhe public key of the user
+     * @param fhe_balance_init The initial balance of the user in the fhe_account
      */
-    event Buy_fETH(address indexed from, uint256 amount, string fhe_pk);
+    event Buy_fETH(
+        address indexed from,
+        uint256 amount,
+        string fhe_pk,
+        string fhe_balance_init
+    );
 
     /**
      * @dev Emitted when a user sends a transaction
@@ -58,7 +64,8 @@ contract FHEToken is ERC20 {
         address indexed to,
         uint256 amount,
         string fhe_pk_new,
-        string fhe_sk_old
+        string fhe_sk_old,
+        string fhe_new_balance
     );
 
     /**
@@ -70,7 +77,8 @@ contract FHEToken is ERC20 {
     event Withdraw_ETH_Approved(
         address indexed to,
         uint256 amount,
-        string fhe_pk_new
+        string fhe_pk_new,
+        string fhe_new_balance
     );
 
     address payable public owner;
@@ -91,9 +99,12 @@ contract FHEToken is ERC20 {
 
     /**
      * @dev Mints fETH to the msg.sender
-     * @param _pk The public key of the user
+     * @param _fhe_pk The public key of the user
      */
-    function buy_fETH(string calldata _pk) public payable onlyValidFees {
+    function buy_fETH(
+        string calldata _fhe_pk,
+        string calldata _fhe_balance_init
+    ) public payable onlyValidFees {
         _mint(msg.sender, msg.value - FEE);
 
         // If the sender is not a user, add them to the list of users
@@ -101,7 +112,7 @@ contract FHEToken is ERC20 {
             hasUser[msg.sender] = true;
         }
 
-        emit Buy_fETH(msg.sender, msg.value - FEE, _pk);
+        emit Buy_fETH(msg.sender, msg.value - FEE, _fhe_pk, _fhe_balance_init);
     }
 
     /**
@@ -137,26 +148,40 @@ contract FHEToken is ERC20 {
     /**
      * @dev Transfers the ETH from the fhe_account to the msg.sender
      * @param _amount The amount of ETH to be withdrawn. This needs to be equal to the tokens owner in the fhe_account with _sk as the secret key
-     * @param _new_pk The new public key to be used for future transactions
-     * @param _sk The secret key used to encrypt the new public key
+     * @param _fhe_sk The secret key used to encrypt the new public key
+     * @param _new_fhe_pk The new public key to be used for future transactions
+     * @param _fhe_new_balance The new balance of the user in the fhe_account
      */
     function withdraw_ETH_request(
         uint256 _amount,
-        string calldata _new_pk,
-        string calldata _sk
+        string calldata _fhe_sk,
+        string calldata _new_fhe_pk,
+        string calldata _fhe_new_balance
     ) external payable onlyUser onlyValidFees {
-        emit Withdraw_ETH_Request(msg.sender, _amount, _new_pk, _sk);
+        emit Withdraw_ETH_Request(
+            msg.sender,
+            _amount,
+            _fhe_sk,
+            _new_fhe_pk,
+            _fhe_new_balance
+        );
     }
 
     function withdraw_ETH_approved(
         address _user,
         uint256 _amount,
-        string calldata _new_pk
+        string calldata _new_fhe_pk,
+        string calldata _fhe_new_balance
     ) external payable onlyOwner {
         payable(_user).transfer(_amount);
 
-        emit Buy_fETH(_user, 0, _new_pk);
-        emit Withdraw_ETH_Approved(_user, _amount, _new_pk);
+        emit Buy_fETH(_user, 0, _new_fhe_pk, _fhe_new_balance);
+        emit Withdraw_ETH_Approved(
+            _user,
+            _amount,
+            _new_fhe_pk,
+            _fhe_new_balance
+        );
     }
 
     function changeOwner(address payable _owner) external onlyOwner {
