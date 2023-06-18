@@ -134,14 +134,12 @@ fn send_funds(data: Json<OracleUserApi>) -> Result<Json<ResponseApi>, Box<dyn st
         //println!("138 data: {:?}", data);
         let user_pk = get_keys::get_keys("user").unwrap().private_key;
 
-        println!("145 data: {:?}", data.amount.parse::<u64>().unwrap());
         let tx = user.create_tx(
             receiver_as_oracle_user.clone(),
             &ORACLE.as_mut().unwrap().clone(),
             data.amount.parse::<u64>().unwrap(),
         );
 
-        println!("1468 data: {:?}", data);
         let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
@@ -245,6 +243,12 @@ fn withdraw_funds(
 #[get("/get_balance")]
 fn get_balance() -> Result<Json<ResponseApi>, Box<dyn std::error::Error>> {
     unsafe {
+        if ORACLE.is_none() {
+            return Ok(Json(ResponseApi {
+                res: "Deposit first".to_string(),
+                res_status: "Error".to_string(),
+            }));
+        }
         let user: User = USER.as_ref().unwrap().clone();
 
         let user_balance = user.user_balance(&ORACLE.as_mut().unwrap()).to_string();
