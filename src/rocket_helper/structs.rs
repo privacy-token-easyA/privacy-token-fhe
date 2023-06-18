@@ -8,7 +8,7 @@ pub struct Message {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct DepositFunds {
     pub address: String,
-    pub amount: u64,
+    pub amount: String,
     pub der_key: String,
 }
 
@@ -16,15 +16,13 @@ pub struct DepositFunds {
 pub struct SendFunds {
     pub address_from: String,
     pub address_to: String,
-    pub amount: u64, // String?
-    pub der_key: String, // needed?
+    pub amount: String,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct WithdrawFunds {
     pub address_to: String,
-    pub amount: u64, // String?
-    pub der_key: String, // needed?
+    pub amount: String,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
