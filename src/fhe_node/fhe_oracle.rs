@@ -59,6 +59,10 @@ impl Oracle {
         self.users.get_mut(&address).unwrap().fhe_balance = fhe_balance;
     }
 
+    pub fn update_user_pk(&mut self, address: String, pk: PublicKey) {
+        self.users.get_mut(&address).unwrap().pk = pk;
+    }
+
     pub fn return_user_fhe_balance(&self, address: String) -> Ciphertext {
         self.users[&address].fhe_balance.clone()
     }
