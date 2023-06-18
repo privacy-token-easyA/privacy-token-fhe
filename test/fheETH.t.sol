@@ -22,13 +22,18 @@ contract fheETHTest is Test {
         deal(bob, 100 ether);
 
         string memory pk_string = "alice_pk";
+        string memory fhe_balance_init = "alice_balance_init";
 
         // Send the next transaction as alice
         vm.prank(alice);
 
         // buy_fETH with FEE + FEE + FEE
         (bool sent, ) = address(fheToken).call{value: FEE * 3}(
-            abi.encodeWithSignature("buy_fETH(string)", pk_string)
+            abi.encodeWithSignature(
+                "buy_fETH(string,string)",
+                pk_string,
+                fhe_balance_init
+            )
         );
 
         // Assert that the transaction was sent successfully
@@ -37,7 +42,11 @@ contract fheETHTest is Test {
         // Send the next transaction as bob
         vm.prank(bob);
         (sent, ) = address(fheToken).call{value: FEE * 3}(
-            abi.encodeWithSignature("buy_fETH(string)", pk_string)
+            abi.encodeWithSignature(
+                "buy_fETH(string,string)",
+                pk_string,
+                fhe_balance_init
+            )
         );
 
         assertEq(sent, true);
@@ -79,6 +88,7 @@ contract fheETHTest is Test {
     function test_withdraw_ETH() public {
         string memory fhe_sk_old = "alice_sk";
         string memory fhe_pk_new = "alice_pk";
+        string memory fhe_new_balance = "alice_balance";
 
         uint256 aliceBalance = address(alice).balance;
 
@@ -86,10 +96,11 @@ contract fheETHTest is Test {
         vm.prank(alice);
         (bool sent, ) = address(fheToken).call{value: FEE}(
             abi.encodeWithSignature(
-                "withdraw_ETH_request(uint256,string,string)",
+                "withdraw_ETH_request(uint256,string,string,string)",
                 FEE,
                 fhe_pk_new,
-                fhe_sk_old
+                fhe_sk_old,
+                fhe_new_balance
             )
         );
 
@@ -99,10 +110,11 @@ contract fheETHTest is Test {
         // Approve the withdrawal as the owner
         (sent, ) = address(fheToken).call(
             abi.encodeWithSignature(
-                "withdraw_ETH_approved(address,uint256,string)",
+                "withdraw_ETH_approved(address,uint256,string,string)",
                 alice,
                 FEE,
-                fhe_pk_new
+                fhe_pk_new,
+                fhe_new_balance
             )
         );
 
