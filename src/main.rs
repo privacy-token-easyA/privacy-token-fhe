@@ -9,6 +9,7 @@ use fhe::bfv::{BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey,
 use fhe_account_handler::get_keys;
 use fhe_account_handler::user::*;
 use fhe_node::fhe_oracle::Oracle;
+use fhe_node::fhe_oracle::OracleUser;
 use fhe_traits::Serialize;
 use fhe_traits::*;
 use rand::rngs::OsRng;
@@ -57,6 +58,16 @@ fn create_account(data: Json<CreateAccount>) -> Json<OracleUserString> {
 
         USER = Some(user.clone());
 
+        let user_as_oracle_user: OracleUser = OracleUser {
+            address: user.address.clone(),
+            fhe_pk: user.fhe_pk.clone(),
+            fhe_balance: user.fhe_balance.clone(),
+        };
+
+        ORACLE
+            .as_mut()
+            .unwrap()
+            .add_user(data.address.clone(), user_as_oracle_user);
         let user_oracle: OracleUserString = OracleUserString {
             address: user.address.clone(),
             fhe_pk: hex::encode(user.fhe_pk.to_bytes()),
